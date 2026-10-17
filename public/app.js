@@ -141,10 +141,45 @@ function renderSessionBar() {
   }
 }
 
+const MAP_OPTION_INFO = [
+  { key: "cityStates", label: "City-states", choices: [["yes", "Yes"], ["no", "No"]] },
+  { key: "barbarians", label: "Barbarians", choices: [["yes", "Yes"], ["no", "No"]] },
+  { key: "ruins", label: "Ancient ruins", choices: [["yes", "Yes"], ["no", "No"]] },
+  { key: "congress", label: "World Congress", choices: [["yes", "Yes"], ["no", "No"]] },
+];
+
+function renderMapOptions() {
+  const section = document.getElementById("mapOptionsSection");
+  section.hidden = !S.hasRolled;
+  if (!S.hasRolled) return;
+
+  document.getElementById("mapOptionsLabel").textContent = S.optionsDone
+    ? (S.optionsLocked ? "Game options — locked" : "Game options — set (can change until a civ is picked)")
+    : "Game options — each player decides two, then civs can be picked";
+
+  document.getElementById("mapOptionsGrid").innerHTML = MAP_OPTION_INFO.map(info => {
+    const opt = S.mapOptions[info.key];
+    if (!opt) return "";
+    const mine = S.you === opt.owner;
+    const canSet = mine && !S.optionsLocked;
+    const owner = mine ? "Your choice" : `Player ${opt.owner}'s choice`;
+    const buttons = info.choices.map(([value, text]) =>
+      `<button type="button" class="choice-btn${opt.value === value ? " selected" : ""}"
+         data-option="${info.key}" data-value="${value}" ${canSet ? "" : "disabled"}>${text}</button>`
+    ).join("");
+    const cls = `map-option p${opt.owner}${mine ? " mine" : ""}${opt.value !== null ? " done" : ""}`;
+    return `<div class="${cls}">
+              <div class="map-option-head"><span>${info.label}</span><span class="map-option-owner">${owner}</span></div>
+              <div class="map-option-choices">${buttons}</div>
+            </div>`;
+  }).join("");
+}
+
 function renderPlayers() {
   [1, 2].forEach(p => {
     const optsEl = document.getElementById(`options-${p}`);
     const mine = S.you === p;
+    const canPick = mine && S.optionsDone;
     const crossed = new Set(S.crossed[p]);
     optsEl.innerHTML = S.pools[p].map(name => {
       const selected = S.picks[p] === name;
@@ -159,7 +194,7 @@ function renderPlayers() {
         : "";
       return `<div class="option-row">
                 <button type="button" class="option-btn${selected ? " selected" : ""}${isCrossed ? " crossed" : ""}"
-                  data-action="pick" data-player="${p}" data-name="${name}" ${mine && isCrossed && !selected ? "disabled" : ""}>
+                  data-action="pick" data-player="${p}" data-name="${name}" ${mine && ((isCrossed && !selected) || !canPick) ? "disabled" : ""}>
                   <span class="opt-name">${civIconImg(name)}${name}</span><span class="tick">&#10003;</span>
                 </button>
                 ${crossBtn}
@@ -183,6 +218,8 @@ function renderStatus() {
     status.textContent = "Open Select Bans to cross out any civilizations you don't want, then press Roll to draft. Either player can change bans, the count and roll — everyone sees the same thing. Player 1 and Player 2 draw from separate, non-overlapping sets.";
   } else if (S.revealed) {
     status.innerHTML = `<strong>Player 1</strong> plays ${S.picks[1]} &middot; <strong>Player 2</strong> plays ${S.picks[2]}`;
+  } else if (!S.optionsDone) {
+    status.textContent = "Set your game options first. You can already look at both civ pools and cross civs out — picking unlocks once all four options are chosen.";
   } else if (S.you === 1 || S.you === 2) {
     status.textContent = S.picked[S.you]
       ? "You have picked. Waiting for your opponent — picks are revealed when both players have chosen."
@@ -212,6 +249,7 @@ function applyState() {
   hideCivPopup();
   renderSessionBar();
   renderBanSection();
+  renderMapOptions();
   renderPlayers();
   renderStatus();
 
@@ -289,6 +327,12 @@ document.addEventListener("click", e => {
   const chip = e.target.closest(".civ-chip");
   if (chip) {
     send({ type: "toggleBan", civ: chip.dataset.name });
+    return;
+  }
+
+  const choice = e.target.closest(".choice-btn");
+  if (choice) {
+    send({ type: "setOption", key: choice.dataset.option, value: choice.dataset.value });
     return;
   }
 

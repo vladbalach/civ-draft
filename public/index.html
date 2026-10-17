@@ -244,6 +244,70 @@
     display: none !important;
   }
 
+  .map-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .map-options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 480px) {
+    .map-options-grid { grid-template-columns: 1fr; }
+  }
+
+  .map-option {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .map-option.p1 { border-left-color: var(--p1); }
+  .map-option.p2 { border-left-color: var(--p2); }
+  .map-option.mine:not(.done) { border-color: var(--accent); border-left-width: 3px; }
+  .map-option.p1.mine:not(.done) { border-left-color: var(--p1); }
+  .map-option.p2.mine:not(.done) { border-left-color: var(--p2); }
+
+  .map-option-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .map-option-owner { font-size: 11.5px; font-weight: 500; color: var(--text-dim); }
+  .map-option.p1 .map-option-owner { color: var(--p1); }
+  .map-option.p2 .map-option-owner { color: var(--p2); }
+
+  .map-option-choices { display: flex; gap: 6px; }
+
+  .choice-btn {
+    flex: 1;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 12.5px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .choice-btn:hover:not(:disabled) { border-color: var(--text-dim); }
+  .choice-btn:disabled { cursor: default; opacity: 0.45; }
+  .choice-btn.selected { opacity: 1; border-color: var(--accent); color: var(--accent); background: #3a3324; font-weight: 600; }
+  .choice-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   .players {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -507,6 +571,11 @@
   <section class="ban-section" id="banSection" hidden>
     <p class="pool-label" id="banLabel">All civilizations &mdash; cross out any to ban them before rolling</p>
     <div class="ban-grid" id="banGrid"></div>
+  </section>
+
+  <section class="map-options" id="mapOptionsSection" hidden>
+    <p class="pool-label" id="mapOptionsLabel">Game options</p>
+    <div class="map-options-grid" id="mapOptionsGrid"></div>
   </section>
 
   <section class="players" id="playersSection" hidden>

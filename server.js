@@ -12,6 +12,14 @@ const MAX_SESSIONS = 5000;
 const ID_RE = /^[A-Za-z0-9_-]{4,32}$/;
 const TOKEN_RE = /^[A-Za-z0-9_-]{8,64}$/;
 const DEFAULT_COUNT = 6;
+// Game settings drafted alongside civs: each player decides two of them, assigned at random on every (re)roll.
+const MAP_OPTIONS = {
+  cityStates: ["yes", "no"],
+  barbarians: ["yes", "no"],
+  ruins: ["yes", "no"],
+  congress: ["yes", "no"],
+};
+const MAP_OPTION_KEYS = Object.keys(MAP_OPTIONS);
 
 const app = express();
 // Icons are cached; HTML/JS are revalidated every load (cheap 304s) so updates reach players immediately.
@@ -45,6 +53,7 @@ function newState() {
     pools: { 1: [], 2: [] },
     picks: { 1: null, 2: null },
     crossed: { 1: new Set(), 2: new Set() },
+    mapOptions: {}, // key -> { owner: 1|2, value: string|null }
   };
 }
 
@@ -72,10 +81,16 @@ function generatePools(st) {
   st.picks[2] = null;
   st.crossed[1].clear();
   st.crossed[2].clear();
+  const keys = shuffled(MAP_OPTION_KEYS);
+  st.mapOptions = {};
+  keys.forEach((key, i) => { st.mapOptions[key] = { owner: i < keys.length / 2 ? 1 : 2, value: null }; });
   st.rev++;
 }
 
 const isRevealed = st => !!(st.picks[1] && st.picks[2]);
+const optionsDone = st => MAP_OPTION_KEYS.every(k => st.mapOptions[k] && st.mapOptions[k].value !== null);
+// Settings are final once anyone has picked a civ, so nobody can adjust them after seeing the other side commit.
+const optionsLocked = st => !!(st.picks[1] || st.picks[2]);
 
 // ---------- sessions ----------
 
@@ -122,6 +137,9 @@ function viewFor(session, seat) {
     picked: { 1: !!st.picks[1], 2: !!st.picks[2] },
     revealed,
     picks,
+    mapOptions: st.mapOptions,
+    optionsDone: optionsDone(st),
+    optionsLocked: optionsLocked(st),
   };
 }
 
@@ -184,8 +202,18 @@ function handleAction(ws, msg) {
       generatePools(st);
       break;
 
+    case "setOption": {
+      const key = typeof msg.key === "string" ? msg.key : "";
+      const opt = Object.hasOwn(MAP_OPTIONS, key) ? st.mapOptions[key] : null;
+      if (!st.hasRolled || !opt || opt.owner !== seat || optionsLocked(st)) return;
+      if (!MAP_OPTIONS[key].includes(msg.value)) return;
+      opt.value = msg.value;
+      break;
+    }
+
     case "pick":
       if (!st.hasRolled || isRevealed(st)) return; // picks are final once both are in
+      if (!optionsDone(st)) return send(ws, { type: "error", message: "Set all game options before picking a civilization." });
       if (!st.pools[seat].includes(civ) || st.crossed[seat].has(civ)) return;
       st.picks[seat] = st.picks[seat] === civ ? null : civ;
       break;
