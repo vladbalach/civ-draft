@@ -163,11 +163,15 @@ function renderMapOptions() {
     const mine = S.you === opt.owner;
     const canSet = mine && !S.optionsLocked;
     const owner = mine ? "Your choice" : `Player ${opt.owner}'s choice`;
-    const buttons = info.choices.map(([value, text]) =>
-      `<button type="button" class="choice-btn${opt.value === value ? " selected" : ""}"
-         data-option="${info.key}" data-value="${value}" ${canSet ? "" : "disabled"}>${text}</button>`
-    ).join("");
-    const cls = `map-option p${opt.owner}${mine ? " mine" : ""}${opt.value !== null ? " done" : ""}`;
+    // The server withholds the opponent's choices until every option is set.
+    const hidden = !mine && opt.value === null;
+    const buttons = hidden
+      ? `<span class="map-option-hidden">${opt.chosen ? "Chosen &#10003; — revealed when all options are set" : "Choosing&hellip;"}</span>`
+      : info.choices.map(([value, text]) =>
+          `<button type="button" class="choice-btn${opt.value === value ? " selected" : ""}"
+             data-option="${info.key}" data-value="${value}" ${canSet ? "" : "disabled"}>${text}</button>`
+        ).join("");
+    const cls = `map-option p${opt.owner}${mine ? " mine" : ""}${opt.chosen ? " done" : ""}`;
     return `<div class="${cls}">
               <div class="map-option-head"><span>${info.label}</span><span class="map-option-owner">${owner}</span></div>
               <div class="map-option-choices">${buttons}</div>

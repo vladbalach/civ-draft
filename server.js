@@ -111,6 +111,17 @@ function seatOnline(session, seat) {
   return false;
 }
 
+// The opponent's option choices are withheld (only "has chosen" is shown) until all options are set.
+function optionsView(st, seat) {
+  const done = optionsDone(st);
+  const view = {};
+  for (const [key, opt] of Object.entries(st.mapOptions)) {
+    const visible = done || opt.owner === seat;
+    view[key] = { owner: opt.owner, value: visible ? opt.value : null, chosen: opt.value !== null };
+  }
+  return view;
+}
+
 // What a given seat is allowed to see. The opponent's pick is withheld until both have picked.
 function viewFor(session, seat) {
   const st = session.state;
@@ -137,7 +148,7 @@ function viewFor(session, seat) {
     picked: { 1: !!st.picks[1], 2: !!st.picks[2] },
     revealed,
     picks,
-    mapOptions: st.mapOptions,
+    mapOptions: optionsView(st, seat),
     optionsDone: optionsDone(st),
     optionsLocked: optionsLocked(st),
   };
